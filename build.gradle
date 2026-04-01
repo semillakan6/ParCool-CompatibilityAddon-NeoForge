@@ -1,131 +1,94 @@
-buildscript {
-    repositories {
-        maven { url = 'https://maven.minecraftforge.net' }
-        mavenCentral()
-    }
-    dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '6.+', changing: true
-        classpath 'org.spongepowered:mixingradle:0.7.+'
-    }
-}
-apply plugin: 'net.minecraftforge.gradle'
-apply plugin: 'org.spongepowered.mixin'
-apply plugin: 'eclipse'
-apply plugin: 'maven-publish'
-
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
-
-mixin {
-    add sourceSets.main, 'parcool_compat_addon.refmap.json'
-    config 'parcool_compat_addon.mixins.json'
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '1.0.21'
 }
 
+group = project.group
 version = "${minecraft_version}-${parcool_version}-${mod_version}"
-archivesBaseName = 'ParCool-CompatibilityAddon'
-
-println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
-minecraft {
-    mappings channel: 'official', version: minecraft_version
-
-    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
-
-    runs {
-        client {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-            mods {
-                parcool_compat_addon {
-                    source sourceSets.main
-                }
-            }
-        }
-        server {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            mods {
-                parcool_compat_addon {
-                    source sourceSets.main
-                }
-            }
-        }
-        data {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            args '--mod', 'parcool_compat_addon', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-            mods {
-                parcool_compat_addon {
-                    source sourceSets.main
-                }
-            }
-        }
-    }
+base {
+    archivesName = 'ParCool-CompatibilityAddon'
 }
 
-sourceSets.main.resources { srcDir 'src/generated/resources' }
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 
 repositories {
+    mavenCentral()
     maven { url = 'https://www.cursemaven.com' }
+    maven { url = 'https://api.modrinth.com/maven' }
+}
 
-    exclusiveContent {
-        forRepository {
-            maven { url = "https://api.modrinth.com/maven" }
-        }
-        forRepositories(fg.repository)
-        filter {
-            includeGroup "maven.modrinth"
+neoForge {
+    version = neo_version
+    validateAccessTransformers = true
+
+    runs {
+        client { client() }
+        server { server() }
+        data { data() }
+    }
+
+    mods {
+        parcool_compat_addon {
+            sourceSet sourceSets.main
         }
     }
 }
+
 dependencies {
-    minecraft "net.minecraftforge:forge:${forge_version}"
+    // ParCool is mandatory for compiling this addon; using a local jar keeps this project buildable even
+    // when upstream is not published to a Maven repo.
+    compileOnly files("libs/${parcool_jar}")
+    runtimeOnly files("libs/${parcool_jar}")
 
-    runtimeOnly fg.deobf("curse.maven:parcool-482378:${parcool_file_id}")
-    compileOnly fg.deobf("curse.maven:parcool-482378:${parcool_file_id}")
-    runtimeOnly fg.deobf("curse.maven:Timeless_and_Classics_Zero-1028108:${TaCZ_file_id}")
-    compileOnly fg.deobf("curse.maven:Timeless_and_Classics_Zero-1028108:${TaCZ_file_id}")
-    runtimeOnly fg.deobf("curse.maven:BetterCombat-639842:${BetterCombat_file_id}")
-    compileOnly fg.deobf("curse.maven:BetterCombat-639842:${BetterCombat_file_id}")
-    runtimeOnly fg.deobf("curse.maven:playerAnimator-658587:${playerAnimator_file_id}")
-    compileOnly fg.deobf("curse.maven:playerAnimator-658587:${playerAnimator_file_id}")
-    runtimeOnly fg.deobf("curse.maven:ClothConfig-348521:${ClothConfig_file_id}")
-    compileOnly fg.deobf("curse.maven:ClothConfig-348521:${ClothConfig_file_id}")
-    runtimeOnly fg.deobf("curse.maven:CarryOn-274259:${CarryOn_file_id}")
-    compileOnly fg.deobf("curse.maven:CarryOn-274259:${CarryOn_file_id}")
-    //runtimeOnly fg.deobf("curse.maven:Paraglider-289240:${Paraglider_file_id}")
-    //compileOnly fg.deobf("curse.maven:Paraglider-289240:${Paraglider_file_id}")
-    runtimeOnly fg.deobf("curse.maven:Vics_Point_Blank-961053:${VicsPointBlank_file_id}")
-    compileOnly fg.deobf("curse.maven:Vics_Point_Blank-961053:${VicsPointBlank_file_id}")
-    runtimeOnly fg.deobf("curse.maven:GeckoLib-388172:${GeckoLib_file_id}")
-    runtimeOnly fg.deobf("curse.maven:RealCamera-851574:${RealCamera_file_id}")
-    compileOnly fg.deobf("curse.maven:RealCamera-851574:${RealCamera_file_id}")
+    // Optional compat mods (1.21.1 NeoForge) as local jars for a stable dev environment.
+    compileOnly files("libs/${bettercombat_jar}")
+    runtimeOnly files("libs/${bettercombat_jar}")
 
-    // runtimeOnly fg.deobf("maven.modrinth:first-person-model:${FirstPersonModel_file_id}")
-    compileOnly fg.deobf("maven.modrinth:first-person-model:${FirstPersonModel_file_id}")
+    compileOnly files("libs/${carryon_jar}")
+    runtimeOnly files("libs/${carryon_jar}")
+
+    compileOnly files("libs/${playeranimator_jar}")
+    runtimeOnly files("libs/${playeranimator_jar}")
+
+    // Better Combat requires Cloth Config at runtime.
+    compileOnly files("libs/${clothconfig_jar}")
+    runtimeOnly files("libs/${clothconfig_jar}")
 }
 
-// Example for how to get properties into the manifest for reading by the runtime..
+processResources {
+    def replaceProperties = [
+            mod_id               : mod_id,
+            mod_version          : mod_version,
+            loader_version_range : loader_version_range,
+            neo_version_range    : neo_version_range,
+            minecraft_version    : minecraft_version
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand replaceProperties
+    }
+}
+
 jar {
     manifest {
         attributes([
-                "Specification-Title"   : "ParCool Compatibility Addon",
-                "Specification-Vendor"    : author,
-                "Specification-Version" : mod_version,
-                "Implementation-Title"    : project.name,
-                "Implementation-Version": mod_version,
-                "Implementation-Vendor"   : author,
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-                "TweakClass"              : "org.spongepowered.asm.launch.MixinTweaker",
-                "MixinConfigs": "parcool_compat_addon.mixins.json"
+                "Specification-Title"          : "ParCool Compatibility Addon",
+                "Specification-Vendor"         : author,
+                "Specification-Version"        : mod_version,
+                "Implementation-Title"         : project.name,
+                "Implementation-Version"       : mod_version,
+                "Implementation-Vendor"        : author,
+                "Implementation-Timestamp"     : new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                "MixinConfigs"                 : "parcool_compat_addon.mixins.json"
         ])
     }
 }
-
-jar.finalizedBy('reobfJar')
 
 publishing {
     publications {

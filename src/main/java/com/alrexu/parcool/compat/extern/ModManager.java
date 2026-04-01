@@ -1,7 +1,7 @@
 package com.alrexu.parcool.compat.extern;
 
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModList;
 
 public abstract class ModManager implements IModManager {
     private boolean installed;

@@ -3,9 +3,9 @@ package com.alrexu.parcool.compat.extern.bettercombat;
 import com.alrex.parcool.api.unstable.animation.AnimationPart;
 import com.alrex.parcool.api.unstable.animation.ParCoolAnimationInfoEvent;
 import net.bettercombat.logic.PlayerAttackHelper;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.bus.api.SubscribeEvent;
 
 public class EventHandlerForBetterCombat {
     @OnlyIn(Dist.CLIENT)
@@ -18,3 +18,4 @@ public class EventHandlerForBetterCombat {
         }
     }
 }
+

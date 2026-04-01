@@ -3,9 +3,9 @@ package com.alrexu.parcool.compat.extern.carryon;
 import com.alrex.parcool.api.unstable.action.ParCoolActionEvent;
 import com.alrex.parcool.api.unstable.animation.ParCoolAnimationInfoEvent;
 import com.alrexu.parcool.compat.extern.ExternalModManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.bus.api.SubscribeEvent;
 
 public class EventHandlerForCarryOn {
     @OnlyIn(Dist.CLIENT)
@@ -23,3 +23,4 @@ public class EventHandlerForCarryOn {
         }
     }
 }
+

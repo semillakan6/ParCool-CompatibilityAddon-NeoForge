@@ -1,10 +1,9 @@
 package com.alrexu.parcool.compat.extern.bettercombat;
 
 import com.alrexu.parcool.compat.extern.ModManager;
-import net.minecraftforge.eventbus.api.IEventBus;
+import net.neoforged.bus.api.IEventBus;
 
 public class BetterCombatManager extends ModManager {
-
     @Override
     public void initWhenInstalled(IEventBus modBus, IEventBus forgeBus) {
     }
@@ -21,3 +20,4 @@ public class BetterCombatManager extends ModManager {
         return "bettercombat";
     }
 }
+

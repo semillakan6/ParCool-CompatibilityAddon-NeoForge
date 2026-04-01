@@ -1,9 +1,9 @@
 package com.alrexu.parcool.compat;
 
 import com.alrexu.parcool.compat.extern.ExternalModManager;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -12,9 +12,8 @@ public class ParCoolCompatAddon {
     public static final String MOD_ID = "parcool_compat_addon";
     public static final Logger LOGGER = LogManager.getLogger();
 
-    public ParCoolCompatAddon() {
-        var modBus = FMLJavaModLoadingContext.get().getModEventBus();
-        var forgeBus = MinecraftForge.EVENT_BUS;
+    public ParCoolCompatAddon(IEventBus modBus) {
+        var forgeBus = NeoForge.EVENT_BUS;
         ExternalModManager.init(modBus, forgeBus);
     }
 }
