@@ -52,3 +52,17 @@ versionRange="[2.0.4+1.21.1,)"
 ordering="BEFORE"
 side="BOTH"
 
+[[dependencies.${mod_id}]]
+modId="entity_texture_features"
+type="optional"
+versionRange="[7.0.13,)"
+ordering="BEFORE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="entity_model_features"
+type="optional"
+versionRange="[3.0.17,)"
+ordering="BEFORE"
+side="CLIENT"
+

@@ -20,6 +20,7 @@ Optional compat layers load only if the corresponding mod is present:
 | **Better Combat**  | Reduces animation clashes with ParCool’s parkour moves. |
 | **Carry On**       | Stops ParCool actions while you are carrying blocks or entities. |
 | **Player Animator**| Lets Player Animator win where it conflicts with some ParCool animations. |
+| **ETF + EMF** | [Entity Texture Features](https://github.com/Traben-0/Entity_Texture_Features) + [Entity Model Features](https://github.com/Traben-0/Entity_Model_Features): while you are in parkour moves that drive the player model (hang, cliff cling, climb, vault, crawl, etc.), the addon registers EMF’s **vanilla model condition** so ParCool arm/body poses show instead of being overridden by CEM player models from resource packs. Uses EMF’s public API (`registerVanillaModelCondition`). Tested against EMF **3.0.17** / ETF **7.0.13** on MC **1.21.x** NeoForge (`gradle.properties`: `emf_modrinth_version`, `etf_modrinth_version`). **Fast Run / Fast Swim** are intentionally excluded here so the existing Player Animator integration can still win. |
 
 **Paraglider** and similar cases are handled inside **ParCool** itself; this addon does not add a separate Paraglider module.
 
@@ -29,7 +30,7 @@ Optional compat layers load only if the corresponding mod is present:
 
 1. **JDK 21** (matches the Gradle toolchain).
 
-2. **Compile dependencies** (ParCool, Better Combat, Carry On, Player Animator, Cloth Config):
+2. **Compile dependencies** (ParCool, Better Combat, Carry On, Player Animator, Cloth Config, plus optional EMF/ETF for IDE support):
 
    - **Easiest:** leave `libs/` empty (or omit jars you do not care to pin). Gradle pulls matching versions from [Modrinth Maven](https://api.modrinth.com/maven) using the `*_modrinth_version` entries in `gradle.properties`.
    - **Pinned jars:** copy release JARs into **`libs/`** using the exact filenames from `gradle.properties` (e.g. `parcool_jar`, `bettercombat_jar`, …). A file present in `libs/` wins over Modrinth for that mod.
@@ -70,7 +71,7 @@ Optional compat layers load only if the corresponding mod is present:
 
 ## Project layout (high level)
 
-- `src/main/java` — addon entrypoint and compat managers for Better Combat, Carry On, and Player Animator.  
+- `src/main/java` — addon entrypoint, compat managers (Better Combat, Carry On, Player Animator), and client-only `EntityModelFeaturesCompat` (EMF API via reflection).  
 - `src/main/resources/META-INF/neoforge.mods.toml` — mod metadata and optional dependencies.  
 - `build.gradle` — ModDevGradle, `libs/` with Modrinth fallback, resource filtering for the TOML.
 

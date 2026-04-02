@@ -83,6 +83,18 @@ dependencies {
         compileOnly "maven.modrinth:cloth-config:${clothconfig_modrinth_version}"
         runtimeOnly "maven.modrinth:cloth-config:${clothconfig_modrinth_version}"
     }
+
+    // EMF + ETF: optional; runtime uses reflection. Jars help IDE / compile checks when placed in libs/.
+    if (file("libs/${emf_jar}").exists()) {
+        compileOnly files("libs/${emf_jar}")
+    } else {
+        compileOnly "maven.modrinth:entity-model-features:${emf_modrinth_version}"
+    }
+    if (file("libs/${etf_jar}").exists()) {
+        compileOnly files("libs/${etf_jar}")
+    } else {
+        compileOnly "maven.modrinth:entitytexturefeatures:${etf_modrinth_version}"
+    }
 }
 
 processResources {
