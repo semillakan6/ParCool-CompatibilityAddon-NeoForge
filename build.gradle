@@ -40,24 +40,49 @@ neoForge {
 }
 
 dependencies {
-    // ParCool is mandatory for compiling this addon; using a local jar keeps this project buildable even
-    // when upstream is not published to a Maven repo.
-    compileOnly files("libs/${parcool_jar}")
-    runtimeOnly files("libs/${parcool_jar}")
+    // Prefer jars in libs/ (exact filenames from gradle.properties). If a file is missing, resolve the same
+    // mod from Modrinth Maven (versions in gradle.properties) so a clean clone still compiles.
 
-    // Optional compat mods (1.21.1 NeoForge) as local jars for a stable dev environment.
-    compileOnly files("libs/${bettercombat_jar}")
-    runtimeOnly files("libs/${bettercombat_jar}")
+    if (file("libs/${parcool_jar}").exists()) {
+        compileOnly files("libs/${parcool_jar}")
+        runtimeOnly files("libs/${parcool_jar}")
+    } else {
+        def parcoolMr = "${minecraft_version}-${parcool_version}"
+        compileOnly "maven.modrinth:parcool:${parcoolMr}"
+        runtimeOnly "maven.modrinth:parcool:${parcoolMr}"
+    }
 
-    compileOnly files("libs/${carryon_jar}")
-    runtimeOnly files("libs/${carryon_jar}")
+    if (file("libs/${bettercombat_jar}").exists()) {
+        compileOnly files("libs/${bettercombat_jar}")
+        runtimeOnly files("libs/${bettercombat_jar}")
+    } else {
+        compileOnly "maven.modrinth:better-combat:${bettercombat_modrinth_version}"
+        runtimeOnly "maven.modrinth:better-combat:${bettercombat_modrinth_version}"
+    }
 
-    compileOnly files("libs/${playeranimator_jar}")
-    runtimeOnly files("libs/${playeranimator_jar}")
+    if (file("libs/${carryon_jar}").exists()) {
+        compileOnly files("libs/${carryon_jar}")
+        runtimeOnly files("libs/${carryon_jar}")
+    } else {
+        compileOnly "maven.modrinth:carry-on:${carryon_modrinth_version}"
+        runtimeOnly "maven.modrinth:carry-on:${carryon_modrinth_version}"
+    }
 
-    // Better Combat requires Cloth Config at runtime.
-    compileOnly files("libs/${clothconfig_jar}")
-    runtimeOnly files("libs/${clothconfig_jar}")
+    if (file("libs/${playeranimator_jar}").exists()) {
+        compileOnly files("libs/${playeranimator_jar}")
+        runtimeOnly files("libs/${playeranimator_jar}")
+    } else {
+        compileOnly "maven.modrinth:playeranimator:${playeranimator_modrinth_version}"
+        runtimeOnly "maven.modrinth:playeranimator:${playeranimator_modrinth_version}"
+    }
+
+    if (file("libs/${clothconfig_jar}").exists()) {
+        compileOnly files("libs/${clothconfig_jar}")
+        runtimeOnly files("libs/${clothconfig_jar}")
+    } else {
+        compileOnly "maven.modrinth:cloth-config:${clothconfig_modrinth_version}"
+        runtimeOnly "maven.modrinth:cloth-config:${clothconfig_modrinth_version}"
+    }
 }
 
 processResources {
