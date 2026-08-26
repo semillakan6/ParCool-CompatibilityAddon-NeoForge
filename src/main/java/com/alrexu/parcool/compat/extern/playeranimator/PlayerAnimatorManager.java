@@ -10,9 +10,8 @@ public class PlayerAnimatorManager extends ModManager {
 
     @Override
     public void initInClient(IEventBus modBus, IEventBus forgeBus) {
-        if (isInstalled()) {
-            forgeBus.register(EventHandlerForPlayerAnimator.class);
-        }
+        // The model composition layer handles all Player Animator stacks without cancelling a
+        // complete ParCool animator or depending on animation/resource-pack identifiers.
     }
 
     @Override
@@ -20,4 +19,3 @@ public class PlayerAnimatorManager extends ModManager {
         return "playeranimator";
     }
 }
-

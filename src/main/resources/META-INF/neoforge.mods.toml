@@ -10,6 +10,9 @@ description='''
 An addon for ParCool, which support compatibility of animation with some mods
 '''
 
+[[mixins]]
+config="parcool_compat_addon.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
@@ -27,8 +30,15 @@ side="BOTH"
 [[dependencies.${mod_id}]]
 modId="parcool"
 type="required"
-versionRange="[3.4.3.1,)"
+versionRange="[${parcool_version},)"
 ordering="BEFORE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="sable"
+type="optional"
+versionRange="[${sable_version},3)"
+ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
@@ -65,4 +75,3 @@ type="optional"
 versionRange="[3.0.17,)"
 ordering="BEFORE"
 side="CLIENT"
-

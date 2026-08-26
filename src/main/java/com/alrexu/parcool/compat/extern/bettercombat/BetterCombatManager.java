@@ -10,9 +10,8 @@ public class BetterCombatManager extends ModManager {
 
     @Override
     public void initInClient(IEventBus modBus, IEventBus forgeBus) {
-        if (isInstalled()) {
-            forgeBus.register(EventHandlerForBetterCombat.class);
-        }
+        // Player Animator transforms are composed after ParCool by client mixins. Registering the
+        // old event handler here would suppress model parts instead of composing both animations.
     }
 
     @Override
@@ -20,4 +19,3 @@ public class BetterCombatManager extends ModManager {
         return "bettercombat";
     }
 }
-

@@ -8,7 +8,12 @@
   "injectors": {
     "defaultRequire": 1
   },
-  "client": [],
+  "client": [
+    "client.PlayerRendererFirstPersonStateMixin",
+    "client.PlayerModelAnimationCompositionMixin",
+    "client.AnimationApplierCompositionMixin"
+  ],
   "mixins": [
+    "sable.WorldUtilSableCollisionMixin"
   ]
 }

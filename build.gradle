@@ -20,6 +20,7 @@ repositories {
     mavenCentral()
     maven { url = 'https://www.cursemaven.com' }
     maven { url = 'https://api.modrinth.com/maven' }
+    maven { url = 'https://maven.ryanhcode.dev/releases' }
 }
 
 neoForge {
@@ -50,6 +51,36 @@ dependencies {
         def parcoolMr = "${minecraft_version}-${parcool_version}"
         compileOnly "maven.modrinth:parcool:${parcoolMr}"
         runtimeOnly "maven.modrinth:parcool:${parcoolMr}"
+    }
+
+    // Sable provides the runtime implementation. Compile only against its stable companion API.
+    compileOnly("dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}") {
+        transitive = false
+    }
+    // Dev/runtime: load Sable in runClient so parkour-on-sub-level can be tested.
+    if (file("libs/${sable_jar}").exists()) {
+        runtimeOnly files("libs/${sable_jar}")
+    } else {
+        runtimeOnly "maven.modrinth:sable:${sable_modrinth_version}"
+    }
+
+    // Create + Create Aeronautics (uses Sable) for physics-vehicle testing in runClient.
+    if (file("libs/${create_jar}").exists()) {
+        runtimeOnly files("libs/${create_jar}")
+    } else {
+        runtimeOnly "maven.modrinth:create:${create_modrinth_version}"
+    }
+    if (file("libs/${create_aeronautics_jar}").exists()) {
+        runtimeOnly files("libs/${create_aeronautics_jar}")
+    } else {
+        runtimeOnly "maven.modrinth:create-aeronautics:${create_aeronautics_modrinth_version}"
+    }
+
+    // Punchy! first-person animations (client-only; runtime for runClient testing).
+    if (file("libs/${punchy_jar}").exists()) {
+        runtimeOnly files("libs/${punchy_jar}")
+    } else {
+        runtimeOnly "maven.modrinth:punchy-fpa:${punchy_modrinth_version}"
     }
 
     if (file("libs/${bettercombat_jar}").exists()) {
@@ -97,13 +128,35 @@ dependencies {
     }
 }
 
+// Ensure Punchy resource pack is present for runClient (run/ is gitignored).
+tasks.register('ensurePunchyResourcePack') {
+    def packDir = file('run/resourcepacks')
+    def packFile = new File(packDir, punchy_swords_pack_file)
+    outputs.file packFile
+    doLast {
+        if (!packFile.exists()) {
+            packDir.mkdirs()
+            new URL(punchy_swords_pack_url).withInputStream { input ->
+                packFile.withOutputStream { output -> output << input }
+            }
+            logger.lifecycle("Downloaded Punchy resource pack to ${packFile}")
+        }
+    }
+}
+
+tasks.named('prepareClientRun').configure {
+    dependsOn 'ensurePunchyResourcePack'
+}
+
 processResources {
     def replaceProperties = [
             mod_id               : mod_id,
             mod_version          : mod_version,
             loader_version_range : loader_version_range,
             neo_version_range    : neo_version_range,
-            minecraft_version    : minecraft_version
+            minecraft_version    : minecraft_version,
+            parcool_version      : parcool_version,
+            sable_version        : sable_version
     ]
     inputs.properties replaceProperties
 
@@ -121,8 +174,7 @@ jar {
                 "Implementation-Title"         : project.name,
                 "Implementation-Version"       : mod_version,
                 "Implementation-Vendor"        : author,
-                "Implementation-Timestamp"     : new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-                "MixinConfigs"                 : "parcool_compat_addon.mixins.json"
+                "Implementation-Timestamp"     : new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
 }

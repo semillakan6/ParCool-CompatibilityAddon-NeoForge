@@ -30,6 +30,9 @@ public class ParCoolCompatAddon {
     }
 
     private static void registerClientOnlyCompat() {
+        if (ParCoolVersion.current() != ParCoolVersion.V3) {
+            return;
+        }
         try {
             Class<?> compat = Class.forName(EMF_COMPAT_CLASS);
             compat.getMethod("register").invoke(null);

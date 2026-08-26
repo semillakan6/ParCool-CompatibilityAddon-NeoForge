@@ -1,42 +1,26 @@
 package com.alrexu.parcool.compat.client;
 
-import com.alrex.parcool.common.action.impl.BreakfallReady;
-import com.alrex.parcool.common.action.impl.CatLeap;
-import com.alrex.parcool.common.action.impl.ChargeJump;
-import com.alrex.parcool.common.action.impl.ClimbPoles;
-import com.alrex.parcool.common.action.impl.ClimbUp;
-import com.alrex.parcool.common.action.impl.ClingToCliff;
-import com.alrex.parcool.common.action.impl.Crawl;
-import com.alrex.parcool.common.action.impl.Dive;
-import com.alrex.parcool.common.action.impl.Dodge;
-import com.alrex.parcool.common.action.impl.Flipping;
-import com.alrex.parcool.common.action.impl.HangDown;
-import com.alrex.parcool.common.action.impl.HideInBlock;
-import com.alrex.parcool.common.action.impl.HorizontalWallRun;
-import com.alrex.parcool.common.action.impl.JumpFromBar;
-import com.alrex.parcool.common.action.impl.QuickTurn;
-import com.alrex.parcool.common.action.impl.RideZipline;
-import com.alrex.parcool.common.action.impl.SkyDive;
-import com.alrex.parcool.common.action.impl.Slide;
-import com.alrex.parcool.common.action.impl.Tap;
-import com.alrex.parcool.common.action.impl.Vault;
-import com.alrex.parcool.common.action.impl.VerticalWallRun;
-import com.alrex.parcool.common.action.impl.WallJump;
-import com.alrex.parcool.common.action.impl.WallSlide;
+import com.alrex.parcool.common.attachment.client.Animation;
 import com.alrex.parcool.common.attachment.common.Parkourability;
 import com.alrexu.parcool.compat.ParCoolCompatAddon;
+import dev.kosmx.playerAnim.api.IPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.fml.ModList;
 
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.function.Function;
 
 /**
  * Registers EMF's {@code registerVanillaModelCondition} via reflection so the dedicated server never loads EMF classes
- * (Entity Model Features is client-only). When ParCool parkour moves are active, EMF uses vanilla model variant 0 so
- * arm/body poses from ParCool render correctly with CEM resource packs.
+ * (Entity Model Features is client-only). Resource-pack CEM poses yield whenever ParCool or a
+ * Player Animator stack owns the player pose; those gameplay animations remain enabled.
  */
 public final class EntityModelFeaturesCompat {
+    private static final long OWNERSHIP_LINGER_TICKS = 6;
+    private static final Map<Player, Long> POSE_OWNERSHIP_UNTIL = new WeakHashMap<>();
+
     private EntityModelFeaturesCompat() {
     }
 
@@ -49,10 +33,12 @@ public final class EntityModelFeaturesCompat {
         }
         try {
             Class<?> api = Class.forName("traben.entity_model_features.EMFAnimationApi");
-            Method register = api.getMethod("registerVanillaModelCondition", Function.class);
-            Function<Object, Boolean> condition = EntityModelFeaturesCompat::parcoolForcesVanillaPlayerModel;
-            register.invoke(null, condition);
-            ParCoolCompatAddon.LOGGER.info("Registered ParCool + Entity Model Features vanilla-model condition");
+            Method registerVanillaModel = api.getMethod("registerVanillaModelCondition", Function.class);
+            Method registerAnimationPause = api.getMethod("registerPauseCondition", Function.class);
+            Function<Object, Boolean> condition = EntityModelFeaturesCompat::gameplayAnimationOwnsPose;
+            registerVanillaModel.invoke(null, condition);
+            registerAnimationPause.invoke(null, condition);
+            ParCoolCompatAddon.LOGGER.info("Registered ParCool + Entity Model Features gameplay-pose conditions");
         } catch (Throwable t) {
             ParCoolCompatAddon.LOGGER.warn("Could not register Entity Model Features compatibility (wrong EMF version?)", t);
         }
@@ -60,36 +46,38 @@ public final class EntityModelFeaturesCompat {
 
     /**
      * Argument is EMF's {@code EMFEntity} at runtime; kept as Object so this class loads without EMF on the classpath.
+     * The animator state is authoritative: it remains active through transition frames after an action flag clears,
+     * and automatically covers every ParCool 3.x animator without depending on a resource pack or action list.
      */
-    private static boolean parcoolForcesVanillaPlayerModel(Object emfEntity) {
+    private static boolean gameplayAnimationOwnsPose(Object emfEntity) {
         if (!(emfEntity instanceof Player player)) {
             return false;
         }
+        boolean ownsPose = FirstPersonRenderState.isRenderingHand();
+        Animation parcoolAnimation = Animation.get(player);
+        if (parcoolAnimation != null && parcoolAnimation.hasAnimator()) {
+            ownsPose = true;
+        }
         Parkourability parkourability = Parkourability.get(player);
-        return parkourability.isDoingAny(
-                ClingToCliff.class,
-                HangDown.class,
-                ClimbUp.class,
-                HorizontalWallRun.class,
-                VerticalWallRun.class,
-                Vault.class,
-                CatLeap.class,
-                WallJump.class,
-                Slide.class,
-                Crawl.class,
-                Dive.class,
-                SkyDive.class,
-                JumpFromBar.class,
-                RideZipline.class,
-                WallSlide.class,
-                ClimbPoles.class,
-                Dodge.class,
-                Flipping.class,
-                QuickTurn.class,
-                Tap.class,
-                ChargeJump.class,
-                HideInBlock.class,
-                BreakfallReady.class
-        );
+        if (parkourability != null && !parkourability.isDoingNothing()) {
+            ownsPose = true;
+        }
+        if (player instanceof IPlayer animatedPlayer && animatedPlayer.getAnimationStack().isActive()) {
+            ownsPose = true;
+        }
+
+        long gameTime = player.level().getGameTime();
+        synchronized (POSE_OWNERSHIP_UNTIL) {
+            if (ownsPose) {
+                POSE_OWNERSHIP_UNTIL.put(player, gameTime + OWNERSHIP_LINGER_TICKS);
+                return true;
+            }
+            Long until = POSE_OWNERSHIP_UNTIL.get(player);
+            if (until != null && gameTime <= until) {
+                return true;
+            }
+            POSE_OWNERSHIP_UNTIL.remove(player);
+            return false;
+        }
     }
 }
