@@ -14,6 +14,10 @@ public class ParCoolCompatAddonMixinPlugin implements IMixinConfigPlugin {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final String SABLE_MIXIN =
             "com.alrexu.parcool.compat.mixin.sable.WorldUtilSableCollisionMixin";
+    private static final String SABLE_CLIFF_JUMP_MIXIN =
+            "com.alrexu.parcool.compat.mixin.sable.CliffJumpSableMixin";
+    private static final String SABLE_CLING_RELEASE_MIXIN =
+            "com.alrexu.parcool.compat.mixin.sable.ClingReleaseSableMixin";
     private static final String PLAYER_MODEL_COMPOSITION_MIXIN =
             "com.alrexu.parcool.compat.mixin.client.PlayerModelAnimationCompositionMixin";
     private static final String ANIMATION_APPLIER_COMPOSITION_MIXIN =
@@ -30,13 +34,16 @@ public class ParCoolCompatAddonMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        if (SABLE_MIXIN.equals(mixinClassName)) {
+        if (SABLE_MIXIN.equals(mixinClassName)
+                || SABLE_CLIFF_JUMP_MIXIN.equals(mixinClassName)
+                || SABLE_CLING_RELEASE_MIXIN.equals(mixinClassName)) {
             boolean sableLoaded = LoadingModList.get().getModFileById("sable") != null;
             boolean parcool3Loaded = isParCool3Loaded();
             boolean enabled = sableLoaded && parcool3Loaded;
             LOGGER.info(
-                    "{} ParCool 3 + Sable collision mixin (Sable loaded: {}, ParCool 3 loaded: {})",
+                    "{} ParCool 3 + Sable mixin {} (Sable loaded: {}, ParCool 3 loaded: {})",
                     enabled ? "Enabling" : "Skipping",
+                    mixinClassName,
                     sableLoaded,
                     parcool3Loaded
             );

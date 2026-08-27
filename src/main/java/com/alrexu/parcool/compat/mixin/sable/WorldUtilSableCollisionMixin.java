@@ -33,11 +33,11 @@ public abstract class WorldUtilSableCollisionMixin {
             LivingEntity entity,
             CallbackInfoReturnable<Vec3> callback
     ) {
-        if (callback.getReturnValue() == null) {
-            Vec3 sableWall = SableCollision.findGrabbableWall(entity);
-            if (sableWall != null) {
-                callback.setReturnValue(sableWall);
-            }
+        // Always run the Sable probe so a successful redirected vanilla result still records
+        // that this cling belongs to a simulated ledge. The release mixin needs that distinction.
+        Vec3 sableWall = SableCollision.findGrabbableWall(entity);
+        if (callback.getReturnValue() == null && sableWall != null) {
+            callback.setReturnValue(sableWall);
         }
     }
 
@@ -76,7 +76,12 @@ public abstract class WorldUtilSableCollisionMixin {
             @Nullable Entity entity,
             AABB bounds
     ) {
-        return level.noCollision(entity, bounds) && !SableCollision.hasSubLevelCollision(level, bounds);
+        boolean vanillaNoCollision = level.noCollision(entity, bounds);
+        if (entity instanceof net.minecraft.world.entity.player.Player player
+                && SableCollision.isCliffJumpReleaseActive(player)) {
+            return vanillaNoCollision;
+        }
+        return vanillaNoCollision && !SableCollision.hasSubLevelCollision(level, bounds);
     }
 
     @Redirect(

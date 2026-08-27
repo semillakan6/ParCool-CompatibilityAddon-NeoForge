@@ -10,6 +10,7 @@ import dev.ryanhcode.sable.companion.math.Pose3dc;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.CrossCollisionBlock;
 import net.minecraft.world.level.block.DirectionalBlock;
@@ -25,6 +26,8 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
 
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -38,9 +41,11 @@ public final class SableCollision {
     private static final long CLIFF_CONTACT_GRACE_TICKS = 4;
     private static final double ASCENDING_CLIFF_HISTORY = 0.30;
     private static final double ASCENDING_CLIFF_STEP = 0.05;
+    private static final long CLIFF_JUMP_RELEASE_TICKS = 6;
     private static final double SUB_LEVEL_MOTION_SEARCH_MARGIN = 1.0;
     private static final double[] SWEPT_POSE_STEPS = {0.25, 0.5, 0.75};
     private static final Map<LivingEntity, CachedWall> LAST_GRABBABLE_WALL = new WeakHashMap<>();
+    private static final Map<Player, Long> CLIFF_JUMP_RELEASE_UNTIL = new WeakHashMap<>();
 
     private SableCollision() {
     }
@@ -128,6 +133,13 @@ public final class SableCollision {
      * This fallback avoids the main-world BlockState/friction phase that follows WorldUtil's probes.
      */
     public static Vec3 findGrabbableWall(LivingEntity entity) {
+        if (entity instanceof Player player && isCliffJumpReleaseActive(player)) {
+            synchronized (LAST_GRABBABLE_WALL) {
+                LAST_GRABBABLE_WALL.remove(entity);
+            }
+            return null;
+        }
+
         CachedWall cached;
         synchronized (LAST_GRABBABLE_WALL) {
             cached = LAST_GRABBABLE_WALL.get(entity);
@@ -175,6 +187,34 @@ public final class SableCollision {
         }
     }
 
+    /** Starts a short no-regrab window only when this jump is leaving a detected Sable ledge. */
+    public static void beginCliffJump(Player player) {
+        synchronized (LAST_GRABBABLE_WALL) {
+            if (!LAST_GRABBABLE_WALL.containsKey(player)) {
+                return;
+            }
+            LAST_GRABBABLE_WALL.remove(player);
+        }
+        synchronized (CLIFF_JUMP_RELEASE_UNTIL) {
+            CLIFF_JUMP_RELEASE_UNTIL.put(player, player.level().getGameTime() + CLIFF_JUMP_RELEASE_TICKS);
+        }
+    }
+
+    public static boolean isCliffJumpReleaseActive(Player player) {
+        long gameTime = player.level().getGameTime();
+        synchronized (CLIFF_JUMP_RELEASE_UNTIL) {
+            Long releaseUntil = CLIFF_JUMP_RELEASE_UNTIL.get(player);
+            if (releaseUntil == null) {
+                return false;
+            }
+            if (gameTime <= releaseUntil) {
+                return true;
+            }
+            CLIFF_JUMP_RELEASE_UNTIL.remove(player);
+            return false;
+        }
+    }
+
     private static Vec3 findGrabbableWallAtOffset(LivingEntity entity, double verticalOffset) {
         double horizontalDistance = entity.getBbWidth() / 2.0;
         double middleHeight = entity.getEyeHeight() + (entity.getBbHeight() - entity.getEyeHeight()) / 2.0;
@@ -213,38 +253,92 @@ public final class SableCollision {
                 position.z + halfWidth
         );
 
-        int x = 0;
-        int z = 0;
-        if (isGrabbableDirection(entity.level(), contactSlice, clearance, distance, 0)) {
-            x++;
+        Vec3 horizontalLook = entity.getLookAngle().multiply(1, 0, 1).normalize();
+        Vec3 bestDirection = null;
+        double bestAlignment = -Double.MAX_VALUE;
+        for (Vec3 direction : getCandidateWallDirections(entity.level(), contactSlice, distance)) {
+            if (!isGrabbableDirection(entity.level(), contactSlice, clearance, direction, distance)) {
+                continue;
+            }
+            double alignment = direction.dot(horizontalLook);
+            if (bestDirection == null || alignment > bestAlignment) {
+                bestDirection = direction;
+                bestAlignment = alignment;
+            }
         }
-        if (isGrabbableDirection(entity.level(), contactSlice, clearance, -distance, 0)) {
-            x--;
-        }
-        if (isGrabbableDirection(entity.level(), contactSlice, clearance, 0, distance)) {
-            z++;
-        }
-        if (isGrabbableDirection(entity.level(), contactSlice, clearance, 0, -distance)) {
-            z--;
-        }
-        return x == 0 && z == 0 ? null : new Vec3(x, 0, z);
+        return bestDirection;
     }
 
     private static boolean isGrabbableDirection(
             Level level,
             AABB contactSlice,
             AABB clearance,
-            double xDistance,
-            double zDistance
+            Vec3 direction,
+            double distance
     ) {
-        double contactX = xDistance == 0
-                ? 0
-                : xDistance + Math.copySign(CLIFF_CONTACT_TOLERANCE, xDistance);
-        double contactZ = zDistance == 0
-                ? 0
-                : zDistance + Math.copySign(CLIFF_CONTACT_TOLERANCE, zDistance);
-        return hasSweptSubLevelContact(level, contactSlice.expandTowards(contactX, 0, contactZ))
-                && !hasSubLevelCollision(level, clearance.expandTowards(xDistance, 0, zDistance));
+        Vec3 contact = direction.scale(distance + CLIFF_CONTACT_TOLERANCE);
+        Vec3 clearanceDistance = direction.scale(distance);
+        return hasSweptSubLevelContact(level, contactSlice.expandTowards(contact))
+                && !hasSubLevelCollision(level, clearance.expandTowards(clearanceDistance));
+    }
+
+    private static List<Vec3> getCandidateWallDirections(Level level, AABB contactSlice, double distance) {
+        List<Vec3> directions = new ArrayList<>();
+        try {
+            BoundingBox3d searchBounds = new BoundingBox3d(
+                    contactSlice.inflate(distance + CLIFF_CONTACT_TOLERANCE + SUB_LEVEL_MOTION_SEARCH_MARGIN)
+            );
+            for (SubLevelAccess subLevel : SableCompanion.INSTANCE.getAllIntersecting(level, searchBounds)) {
+                Pose3dc currentPose = subLevel.logicalPose();
+                Pose3dc lastPose = subLevel.lastPose();
+                addPoseWallDirections(directions, currentPose);
+                addPoseWallDirections(directions, lastPose);
+
+                Pose3d samplePose = new Pose3d();
+                for (double step : SWEPT_POSE_STEPS) {
+                    lastPose.lerp(currentPose, step, samplePose);
+                    addPoseWallDirections(directions, samplePose);
+                }
+            }
+        } catch (RuntimeException | LinkageError error) {
+            logFailure(error);
+        }
+
+        // Keep the original directions as a fallback for stationary/axis-aligned sub-levels.
+        addDirection(directions, new Vec3(1, 0, 0));
+        addDirection(directions, new Vec3(-1, 0, 0));
+        addDirection(directions, new Vec3(0, 0, 1));
+        addDirection(directions, new Vec3(0, 0, -1));
+        return directions;
+    }
+
+    private static void addPoseWallDirections(List<Vec3> directions, Pose3dc pose) {
+        addTransformedHorizontalAxis(directions, pose, new Vector3d(1, 0, 0));
+        addTransformedHorizontalAxis(directions, pose, new Vector3d(0, 0, 1));
+    }
+
+    private static void addTransformedHorizontalAxis(
+            List<Vec3> directions,
+            Pose3dc pose,
+            Vector3d localAxis
+    ) {
+        Vector3d transformed = pose.transformNormal(localAxis, new Vector3d());
+        Vec3 horizontal = new Vec3(transformed.x, 0, transformed.z);
+        if (horizontal.lengthSqr() < 1.0E-8) {
+            return;
+        }
+        horizontal = horizontal.normalize();
+        addDirection(directions, horizontal);
+        addDirection(directions, horizontal.reverse());
+    }
+
+    private static void addDirection(List<Vec3> directions, Vec3 candidate) {
+        for (Vec3 existing : directions) {
+            if (existing.dot(candidate) > 0.9999) {
+                return;
+            }
+        }
+        directions.add(candidate);
     }
 
     /** Finds the plot block that vanilla getHangableBars cannot see after its collision probe. */
