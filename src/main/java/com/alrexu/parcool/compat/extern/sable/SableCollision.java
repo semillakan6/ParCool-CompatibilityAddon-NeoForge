@@ -145,14 +145,19 @@ public final class SableCollision {
             cached = LAST_GRABBABLE_WALL.get(entity);
         }
 
-        Vec3 currentWall = findGrabbableWallAtOffset(entity, 0);
+        Vec3 preferredDirection = cached == null ? null : cached.direction;
+        Vec3 currentWall = findGrabbableWallAtOffset(entity, 0, preferredDirection);
         VerticalWall wall = currentWall == null ? null : new VerticalWall(currentWall, 0);
 
         // Once an ascending probe found the ledge, keep validating at that same relative
         // height. ClingToCliff stops vertical movement immediately, so checking only the
         // unshifted narrow band on the following tick would discard a valid grab again.
         if (wall == null && cached != null && cached.verticalOffset != 0) {
-            Vec3 cachedOffsetWall = findGrabbableWallAtOffset(entity, cached.verticalOffset);
+            Vec3 cachedOffsetWall = findGrabbableWallAtOffset(
+                    entity,
+                    cached.verticalOffset,
+                    preferredDirection
+            );
             if (cachedOffsetWall != null) {
                 wall = new VerticalWall(cachedOffsetWall, cached.verticalOffset);
             }
@@ -165,7 +170,7 @@ public final class SableCollision {
             for (double offset = -ASCENDING_CLIFF_STEP;
                  offset >= -ASCENDING_CLIFF_HISTORY - 1.0E-7;
                  offset -= ASCENDING_CLIFF_STEP) {
-                Vec3 historicalWall = findGrabbableWallAtOffset(entity, offset);
+                Vec3 historicalWall = findGrabbableWallAtOffset(entity, offset, preferredDirection);
                 if (historicalWall != null) {
                     wall = new VerticalWall(historicalWall, offset);
                     break;
@@ -215,14 +220,30 @@ public final class SableCollision {
         }
     }
 
-    private static Vec3 findGrabbableWallAtOffset(LivingEntity entity, double verticalOffset) {
+    private static Vec3 findGrabbableWallAtOffset(
+            LivingEntity entity,
+            double verticalOffset,
+            Vec3 preferredDirection
+    ) {
         double horizontalDistance = entity.getBbWidth() / 2.0;
         double middleHeight = entity.getEyeHeight() + (entity.getBbHeight() - entity.getEyeHeight()) / 2.0;
-        Vec3 wall = findGrabbableWall(entity, horizontalDistance, middleHeight, verticalOffset);
+        Vec3 wall = findGrabbableWall(
+                entity,
+                horizontalDistance,
+                middleHeight,
+                verticalOffset,
+                preferredDirection
+        );
         if (wall == null) {
             double upperHeight = entity.getBbHeight()
                     + (entity.getBbHeight() - entity.getEyeHeight()) / 2.0;
-            wall = findGrabbableWall(entity, horizontalDistance, upperHeight, verticalOffset);
+            wall = findGrabbableWall(
+                    entity,
+                    horizontalDistance,
+                    upperHeight,
+                    verticalOffset,
+                    preferredDirection
+            );
         }
         return wall;
     }
@@ -231,7 +252,8 @@ public final class SableCollision {
             LivingEntity entity,
             double distance,
             double heightOffset,
-            double verticalOffset
+            double verticalOffset,
+            Vec3 preferredDirection
     ) {
         Vec3 position = entity.position();
         double baseY = position.y + verticalOffset;
@@ -254,19 +276,28 @@ public final class SableCollision {
         );
 
         Vec3 horizontalLook = entity.getLookAngle().multiply(1, 0, 1).normalize();
-        Vec3 bestDirection = null;
-        double bestAlignment = -Double.MAX_VALUE;
+        Vec3 bestLookDirection = null;
+        double bestLookAlignment = -Double.MAX_VALUE;
+        Vec3 bestTrackedDirection = null;
+        double bestTrackedAlignment = 0.25;
         for (Vec3 direction : getCandidateWallDirections(entity.level(), contactSlice, distance)) {
             if (!isGrabbableDirection(entity.level(), contactSlice, clearance, direction, distance)) {
                 continue;
             }
-            double alignment = direction.dot(horizontalLook);
-            if (bestDirection == null || alignment > bestAlignment) {
-                bestDirection = direction;
-                bestAlignment = alignment;
+            double lookAlignment = direction.dot(horizontalLook);
+            if (bestLookDirection == null || lookAlignment > bestLookAlignment) {
+                bestLookDirection = direction;
+                bestLookAlignment = lookAlignment;
+            }
+            if (preferredDirection != null) {
+                double trackedAlignment = direction.dot(preferredDirection);
+                if (trackedAlignment > bestTrackedAlignment) {
+                    bestTrackedDirection = direction;
+                    bestTrackedAlignment = trackedAlignment;
+                }
             }
         }
-        return bestDirection;
+        return bestTrackedDirection == null ? bestLookDirection : bestTrackedDirection;
     }
 
     private static boolean isGrabbableDirection(
