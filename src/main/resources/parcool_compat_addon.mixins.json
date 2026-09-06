@@ -10,6 +10,8 @@
   },
   "client": [
     "client.PlayerRendererFirstPersonStateMixin",
+    "client.LivingEntityRendererPlayerBaseStateMixin",
+    "client.PlayerModelEmfCompatMixin",
     "client.PlayerModelAnimationCompositionMixin",
     "client.AnimationApplierCompositionMixin"
   ],

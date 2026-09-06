@@ -22,6 +22,11 @@ public class ParCoolCompatAddonMixinPlugin implements IMixinConfigPlugin {
             "com.alrexu.parcool.compat.mixin.client.PlayerModelAnimationCompositionMixin";
     private static final String ANIMATION_APPLIER_COMPOSITION_MIXIN =
             "com.alrexu.parcool.compat.mixin.client.AnimationApplierCompositionMixin";
+    private static final Set<String> EMF_MIXINS = Set.of(
+            "com.alrexu.parcool.compat.mixin.client.PlayerRendererFirstPersonStateMixin",
+            "com.alrexu.parcool.compat.mixin.client.LivingEntityRendererPlayerBaseStateMixin",
+            "com.alrexu.parcool.compat.mixin.client.PlayerModelEmfCompatMixin"
+    );
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -56,6 +61,17 @@ public class ParCoolCompatAddonMixinPlugin implements IMixinConfigPlugin {
             boolean enabled = playerAnimatorLoaded && parcool3Loaded;
             LOGGER.info(
                     "{} ParCool 3 + Player Animator composition mixin {}",
+                    enabled ? "Enabling" : "Skipping",
+                    mixinClassName
+            );
+            return enabled;
+        }
+        if (EMF_MIXINS.contains(mixinClassName)) {
+            boolean emfLoaded = LoadingModList.get().getModFileById("entity_model_features") != null;
+            boolean parcool3Loaded = isParCool3Loaded();
+            boolean enabled = emfLoaded && parcool3Loaded;
+            LOGGER.info(
+                    "{} ParCool 3 + EMF render-scope mixin {}",
                     enabled ? "Enabling" : "Skipping",
                     mixinClassName
             );

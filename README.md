@@ -20,7 +20,7 @@ Optional compat layers load only if the corresponding mod is present:
 | **Better Combat**  | Composes Better Combat’s Player Animator transforms after ParCool instead of cancelling either animation, keeping attacks, held items, and skin layers aligned in first and third person. |
 | **Carry On**       | Stops ParCool actions while you are carrying blocks or entities. |
 | **Player Animator**| Defers active model-part transforms until ParCool finishes its pose, then applies the data-driven animation exactly once and resynchronizes every outer skin layer. |
-| **ETF + EMF** | [Entity Texture Features](https://github.com/Traben-0/Entity_Texture_Features) + [Entity Model Features](https://github.com/Traben-0/Entity_Model_Features): resource-pack CEM poses yield during ParCool actions or while Player Animator/Better Combat owns the pose, with a short transition grace period. Ordinary grounded, jumping, falling, and flying resource-pack animations remain available. The gameplay animation itself is not cancelled, and vanilla geometry is used consistently for that pass to prevent split skin layers. Tested against EMF **3.0.17** / ETF **7.0.13**. |
+| **ETF + EMF** | [Entity Texture Features](https://github.com/Traben-0/Entity_Texture_Features) + [Entity Model Features](https://github.com/Traben-0/Entity_Model_Features): resource-pack CEM poses yield on the base player model during ParCool actions or while Player Animator/Better Combat owns the pose, with a short transition grace period. Custom EMF armor and modded armor models remain enabled and follow the gameplay pose. Fast Run and Fast Swim are intentionally excluded, so ordinary sprint, swim, grounded, jumping, falling, and flying resource-pack behavior remains available. Tested against EMF **3.0.17** / ETF **7.0.13**. |
 | **Sable** | Makes ParCool probes use exact transformed collision shapes from Sable 2.x physics sub-levels, enabling wall jumps, stable wall runs, vaults, cliff clings, and hanging from supported bars. Tested target: Sable **2.0.5** with Sable Companion **1.6.0**. |
 
 On ParCool 4.x, the addon intentionally registers only a placeholder and does not claim Better Combat, Carry On, Player Animator, EMF, or Sable action compatibility yet.
@@ -85,7 +85,7 @@ On ParCool 4.x, the addon intentionally registers only a placeholder and does no
 - **Game / loader**: see `minecraft_version`, `neo_version` in `gradle.properties`.  
 - **Addon semver**: `mod_version` in `gradle.properties` (also written into `neoforge.mods.toml` at build time).
 
-Current addon release: **1.2**. Sable compatibility covers ParCool wall and ledge collision probes plus the block-state classification used for hanging from supported pillars, end rods, fences, and walls inside a sub-level.
+Current addon release: **1.2.1**. Sable compatibility covers ParCool wall and ledge collision probes plus the block-state classification used for hanging from supported pillars, end rods, fences, and walls inside a sub-level.
 
 ---
 
